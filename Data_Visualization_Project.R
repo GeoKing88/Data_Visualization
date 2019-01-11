@@ -53,19 +53,34 @@ dataframe$cus_lng = geolocation$geolocation_lng[match(dataframe$customer_zip_cod
 #https://en.wikipedia.org/wiki/States_of_Brazil
 initials = c("SP", "MG", "PR", "SC", "DF", "RS", "RJ", "GO", "MA", "ES", "BA", "PI", "RO", "MT", "CE", "RN", "PE", "SE", "MS", "PB", "PA", "AM", "AC")
 states = c("São Paulo", "Minas Gerais", "Paraná", "Santa Catarina", "Distrito Federal", "Rio Grande do Sul", "Rio de Janeiro", "Goiás", "Maranhão", "Espírito Santo", "Bahia", "Piauí", "Rondônia", "Mato Grosso", "Ceará", "Rio Grande do Norte", "Pernambuco", "Sergipe", "Mato Grosso do Sul", "Paraíba", "Pará", "Amazonas", "Acre")
-region = c("Sudeste", "Sudeste", "Noroeste", "Sul", "Centro-Oeste", "Sul", "Sudeste", "Centro-Oeste", "Noroeste", "Sudeste", "Noroeste", "Noroeste", "Norte", "Centro-Oeste", "Noroeste", "Noroeste", "Noroeste", "Noroeste", "Centro-Oeste", "Noroeste", "Norte", "Norte", "Norte")
+region = c("Sudeste", "Sudeste", "Nordeste", "Sul", "Centro-Oeste", "Sul", "Sudeste", "Centro-Oeste", "Nordeste", "Sudeste", "Nordeste", "Nordeste", "Norte", "Centro-Oeste", "Nordeste", "Nordeste", "Nordeste", "Nordeste", "Centro-Oeste", "Nordeste", "Norte", "Norte", "Norte")
+
 
 #Create a dataframe to match the geography the states, regions and initials
 geography_dataframe = data.frame(initials , states, region) 
+geography_dataframe[, c("Region_Initials")] = NA
+geography_dataframe$Region_Initials[(geography_dataframe$region == "Sudeste")] = "SE"
+geography_dataframe$Region_Initials[(geography_dataframe$region == "Nordeste")] = "NE"
+geography_dataframe$Region_Initials[(geography_dataframe$region == "Sul")] = "S"
+geography_dataframe$Region_Initials[(geography_dataframe$region == "Centro-Oeste")] = "CO"
+geography_dataframe$Region_Initials[(geography_dataframe$region == "Norte")] = "N"
+
 
 #Populate the state and the region
-columns_geography = c("customer_state_name", "customer_region", "seller_state_name", "seller_region")
+columns_geography = c("customer_state_name", "customer_region", "seller_state_name", "seller_region", "cus_region_initials", "sel_region_initials")
 dataframe[, columns_geography] = NA
 dataframe$seller_state_name = geography_dataframe$states[match(dataframe$seller_state, geography_dataframe$initials)]
 dataframe$seller_region = geography_dataframe$region[match(dataframe$seller_state, geography_dataframe$initials)]
 dataframe$customer_state_name = geography_dataframe$states[match(dataframe$customer_state, geography_dataframe$initials)]
 dataframe$customer_region = geography_dataframe$region[match(dataframe$customer_state, geography_dataframe$initials)]
+dataframe$cus_region_initials = geography_dataframe$Region_Initials[match(dataframe$customer_state, geography_dataframe$initials)]
+dataframe$sel_region_initials = geography_dataframe$Region_Initials[match(dataframe$seller_state, geography_dataframe$initials)]
 
+#drop the unknown states from customer
+dataframe = dataframe[!is.na(dataframe$customer_state),]
+
+#drop the unknown states from seller
+dataframe = dataframe[!is.na(dataframe$seller_state),]
 
 dataframe = subset(dataframe, select=-c(seller_id, product_id, order_id, customer_id, review_id))
 #Drop not delivered products 
@@ -272,27 +287,40 @@ year_2018 = subset(year_2018, select=-c(Price.Month))
 #brazil <- ggplot() + mapa + theme_bw() + xlab("Longitude (decimals)") + ylab("Latitude (decimals)") + 
 #  theme(panel.border = element_blank(), panel.grid.major = element_line(colour = "grey80"), panel.grid.minor = element_blank())
 
-library("tmap")
-library("tmaptools")
-library("sf")
-library("leaflet")
 
-# map of Brazil + states --------------------------------------------------
+#For Regions
+region_map_shp = read_shape(file="C:\\Users\\hppor\\Desktop\\Faculdade\\teste\\regioes_2010.shp", as.sf=TRUE)
+#region_map_df = data.frame(estados)
+region_map_shp$sigla = as.character(region_map_shp$sigla)
+price_in_map = subset(dataframe, select=c(Date_Purchase, Category,
+                                          seller_region, seller_state_name, customer_region, customer_state_name,
+                                          sel_lat, sel_lng, cus_lat, cus_lng, customer_state, seller_state, product_category_name,
+                                          price, cus_region_initials))
 
-estados <- read_shape(file="C:\\Users\\hppor\\Desktop\\Faculdade\\teste\\regioes_2010.shp", as.sf=TRUE)
-estados2 = data.frame(estados)
-#estados1 <- fortify(estados)
-test = merge(estados2, dataframe, by.x = 'nome', by.y = 'customer_region')
+region_map_df = group_by(price_in_map, cus_region_initials)
+region_map_df = summarise(region_map_df, Price=sum(price))
+region_map_df = data.frame(Initial = region_map_df$cus_region_initials, Price=region_map_df)
+region_map_df = subset(region_map_df, select = -c(Price.cus_region_initials))  
+region_map_df = region_map_df[!is.na(region_map_df$Initial),]
 
-shapefile(test,'C:\\Users\\hppor\\Desktop\\Faculdade\\teste\\test.shp')
-#br_est <- brazil + geom_path(data = estados1, aes(x = long, y = lat, group = group), colour = "black")
+region_map_df$Initial = as.character(region_map_df$Initial)
+region_map_df = region_map_df[order(region_map_df$Initial),]
+region_map_shp$sigla = as.character(region_map_shp$sigla)
+region_map_shp = region_map_shp[order(region_map_shp$sigla),]
 
-library(maptools)
-#s2 = readOGR(".", "regioes_2010.shp")
+region_map = append_data(region_map_shp, region_map_df, key.shp = "sigla", key.data = "Initial")
+
+#brazil_region_map = subset(price_in_map, select=c(cus_region_initials, price))
+
+
+
+
+
+#year_2016 = subset(sell_history, select=-c(Date, Date_, Hour, Weekday, Day, Year))
 
 
 #Lets try shinny
-
+'''
 header = dashboardHeader(title = "Olist Sales Visualization")
 #sidebar
 sidebar = dashboardSidebar(
@@ -387,3 +415,4 @@ server = function(input, output) {
   })
 }
 shinyApp(ui, server)
+'''
