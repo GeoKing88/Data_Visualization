@@ -310,6 +310,10 @@ region_map_shp = region_map_shp[order(region_map_shp$sigla),]
 
 region_map = append_data(region_map_shp, region_map_df, key.shp = "sigla", key.data = "Initial")
 
+
+bra = hcmap("countries/br/br-all")
+
+
 #brazil_region_map = subset(price_in_map, select=c(cus_region_initials, price))
 
 
@@ -320,7 +324,6 @@ region_map = append_data(region_map_shp, region_map_df, key.shp = "sigla", key.d
 
 
 #Lets try shinny
-'''
 header = dashboardHeader(title = "Olist Sales Visualization")
 #sidebar
 sidebar = dashboardSidebar(
@@ -331,6 +334,13 @@ sidebar = dashboardSidebar(
   )
 )
 body = dashboardBody(
+  tags$head(tags$style(HTML('
+                             .main-header {
+                                background-color=aqua
+                             }
+                            
+                            
+                            '))),
   fluidRow(
     #sidebarPanel(
     #  selectInput("primeiro", "segundo", unique(group_date$Year))
@@ -341,7 +351,8 @@ body = dashboardBody(
     ),
     box(title = "Sales per Category",
         br(),
-        tags$script(src="javascrip.js"))
+        highchartOutput("mapPlot"))
+        
   ),
   fluidRow(
     box(title = "Sales Mapping",
@@ -364,8 +375,8 @@ server = function(input, output) {
     #out = group_date[from:to, c("Date", "Price")]
     #out
     #out = group_by(group_date$Year)
-    condition = which(group_date$Year ==input$primeiro)
-    out = data.frame("Year" = c(2016, 2017, 2018), "Price"=condition)
+    #condition = which(group_date$Year ==input$primeiro)
+    #out = data.frame("Year" = c(2016, 2017, 2018), "Price"=condition)
     #out
   })
   #output$plot = renderBillboarder({
@@ -407,12 +418,14 @@ server = function(input, output) {
           ))
       )
   })
-  output$europe <- renderPlot({
+  output$europe = renderPlot({
     #leaflet(nycounties) %>%
     #  addTiles() # Add default OpenStreetMap map tiles
-    qtm(estados)
+    qtm(region_map, "Price.Price")
     
+  })
+  output$mapPlot = renderHighchart({
+    hcmap("C:\\Users\\hppor\\Desktop\\Faculdade\\Projeto\\municipio.geojson", download_map_data=FALSE)
   })
 }
 shinyApp(ui, server)
-'''
