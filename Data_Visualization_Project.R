@@ -616,9 +616,9 @@ create_map = function(administration_division = "Region", display_map = brasil_r
   }
   print("antes de returnar")
   hc =highchart(type = "map") %>% 
-    hc_add_series_map(map = display_map , df = dataframe2 , joinBy = join_keys, value = "Price") %>%
+    hc_add_series_map(map = display_map , df = dataframe2 , joinBy = join_keys, value = "Price", name='Location') %>%
     hc_title(text="Review")%>%
-    hc_subtitle(text="Brazil - Region")%>%
+    hc_subtitle(text="Brazil")%>%
     hc_legend(valueDecimals = 0, valueSuffix = "%") %>%
     hc_mapNavigation(enabled = TRUE)
   
@@ -633,13 +633,9 @@ create_map = function(administration_division = "Region", display_map = brasil_r
 #Lets try shinny
 
 #Lets try shinny
-header = dashboardHeader(title = "Olist Sales Visualization", titleWidth = 300,
-                         includeCSS("www/style.css"),
-                         includeCSS("www/bootstrap.css"),
-                         includeScript("www/boostrap.js"))
+header = dashboardHeader(title = "Olist Sales Visualization", titleWidth = 300)
 #sidebar
-sidebar = dashboardSidebar( 
-  title = "Sales Mapping",
+sidebar = dashboardSidebar(sidebarMenu(menuItem(
   radioButtons(
     inputId = "map_radio_button",
     label = "Divisão Administrativa",
@@ -647,26 +643,45 @@ sidebar = dashboardSidebar(
       c("Region", "State"),
     selected = c("State")
   )
-)
+)),
+sidebarMenuOutput("menu"))
 #selectInput ("segundo", "Cities", choices = list(unique(geolocation[,"geolocation_city"]))) )
 body = dashboardBody(tags$head(tags$style(
   HTML(
     '
     .content-wrapper {
-    background-color: #aaaaaa;
+    background-color: #dbe1e1;
     }
     .skin-green .main-header .logo{
-    background-color: #53917e;
+    background-color: #5e8d9f;
     }
     .skin-green .main-header .navbar{
-    background-color: #53917e;
+    background-color: #5e8d9f;
     }
     .skin-green .left-side, .skin-green .main-sidebar, .skin-green .wrapper{
-    background-color: #53917e;
+    background-color: #b8cbd5;
     }
     .skin-green .sidebar-menu>li.active>a, .skin-green .sidebar-menu>li:hover>a{
-    background: #53917e;
-    border-left-color: #53917e;
+    background: #5e8d9f;
+    border-left-color: #5e8d9f;
+    }
+    .highcharts-drilldown-axis-label{
+    fill: #666666 !important;
+    text-decoration: none !important;
+    font-weight: normal !important;
+    font-family: "Lucida Sans Unicode" !important;
+    }
+    .skin-green .main-header .navbar .sidebar-toggle:hover {
+    background-color: #b8cbd5 !important;
+    }
+    .skin-green .main-header .logo:hover {
+    background-color: #b8cbd5 !important;
+    }
+    #sidebarItemExpanded {
+    background:#5e8d9f;
+    }
+    .skin-green .sidebar-menu>li>a, .skin-green .sidebar-menu>li>a{
+    color:#fff;
     }
     '
   )
@@ -692,7 +707,44 @@ ui = dashboardPage(title = 'Olist Sales Visualization', skin = 'green',
 #shinyApp(ui = ui, server = server)
 
 server = function(input, output) {
-
+  
+  output$menu <- renderMenu({
+    year_c = NULL
+    month_c = NULL
+    category_c=NULL
+    subcategory_c=NULL
+    if (NROW(na.omit(category_name[category_name$Year == as.numeric(input$canvasClicked2[1]),])) >
+        0) {
+      year_c = as.numeric(input$canvasClicked2[1])
+    }
+    else if (NROW(na.omit(category_name[category_name$Month == as.numeric(input$canvasClicked2[1]),])) >
+             0) {
+      if (all(input$canvasClicked2[2] == "Sales per Month 2018")) {
+        year_c = 2018
+        month_c = as.numeric(input$canvasClicked2[1])
+      } else{
+        year_c = 2017
+        month_c = as.numeric(input$canvasClicked2[1])
+      }
+    }
+    if(NROW(na.omit(subcat[subcat$Category %in% input$canvasClicked,]))>0){
+      category_c = input$canvasClicked
+    }else if (NROW(na.omit(subcat[subcat$Subcat %in% input$canvasClicked,]))>0){
+      subcategory_c = input$canvasClicked
+    }
+    
+   year_c = paste('Year Filter: ',as.character(year_c),sep = "")
+   month_c = paste('Month Filter: ',as.character(month_c),sep = "")
+   category_c= paste('Category Filter: ',as.character(category_c),sep = "")
+   subcategory_c=paste('Subcategory Filter: ',as.character(subcategory_c),sep = "")
+    
+    sidebarMenu(id="mytabs",
+                menuItem(year_c, tabName="dashboard", icon = icon("calendar")),
+                menuItem(month_c, tabName="dashboard", icon = icon("calendar-alt")),
+                menuItem(category_c, tabName="dashboard", icon = icon("shopping-cart")),
+                menuItem(subcategory_c, tabName="dashboard", icon = icon("cart-arrow-down"))
+    )
+  })
 
   map88 = reactive({
     year_c = NULL
@@ -916,7 +968,7 @@ server = function(input, output) {
       hc_title(text = ' ') %>%
       hc_xAxis(title = list(text = 'Year')) %>%
       hc_yAxis(title = list(text = 'Sales in $R')) %>%
-      hc_colors('#53917e') %>%
+      hc_colors('#5e8d9f') %>%
       hc_xAxis(type='category') %>%
       hc_legend(enabled = FALSE) %>%
       hc_plotOptions(series = list(
@@ -958,7 +1010,7 @@ server = function(input, output) {
                  )
                )) %>%
       hc_title(text = '') %>%
-      hc_colors('#53917e') %>%
+      hc_colors('#5e8d9f') %>%
       hc_xAxis(title = list(text = 'Category')) %>%
       hc_yAxis(title = list(text = 'Sales in $R')) %>%
       hc_legend(enabled = FALSE) %>%
