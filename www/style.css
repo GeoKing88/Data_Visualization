@@ -1,0 +1,53 @@
+
+html,
+body {
+  height: 100%;
+  font-family: "Roboto", sans-serif;
+  background-color:#000000
+}
+
+
+.background-content-box {
+  width: 100%;
+  height: 65%;
+  display: table;
+}
+
+.background-content-box-inner {
+  height: 100%;
+  width: 100%;
+  display: table-cell;
+  vertical-align: middle;
+  text-align: center;
+}
+
+.background-cover {
+  height: 100%;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.box {
+  margin: 120px auto;
+  height: 650px;
+  width: 600px;
+  border: solid black 1px;
+  padding: 40px;
+}
+
+/* Navbar */
+#navbar-color{
+    background-color: #23395B;
+    height: 100px;
+
+}
+.first-row{
+    width: 100%;
+    height: 50%;
+    margin: 5px
+}
+
+.first-col{
+    background-color: #ffffff
+}
+
